@@ -2,7 +2,7 @@
 
 A source generator that creates **tagged union types** for VB.NET, providing type-safe pattern matching capabilities similar to discriminated unions in functional languages.
 
-> **v1.0.1 Stable Release**: Fixed implicit conversion operators and multiple generic type parameters.Only this version is literally fully-tested. Users should still define custom types in their VB.NET projects for each union case.
+> **v1.0.1 Stable Release**: Fixed implicit conversion operators and multiple generic type parameters. Only this version is literally fully-tested and supports comments in `union` files. Users should still define custom types in their VB.NET projects for each union case.
 > 
 > **⚠️ v1.0.0 is broken**: Version 1.0.0 has critical issues with implicit conversions and generic type handling. Please upgrade to v1.0.1 or later.
 
