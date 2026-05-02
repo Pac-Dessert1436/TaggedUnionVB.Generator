@@ -2,7 +2,9 @@
 
 A source generator that creates **tagged union types** for VB.NET, providing type-safe pattern matching capabilities similar to discriminated unions in functional languages.
 
-> **v1.0.0 Stable Release**: Initial version with fundamental, fully-tested features. Users should still define custom types in their VB.NET projects for each union case.
+> **v1.0.1 Stable Release**: Fixed implicit conversion operators and multiple generic type parameters.Only this version is literally fully-tested. Users should still define custom types in their VB.NET projects for each union case.
+> 
+> **⚠️ v1.0.0 is broken**: Version 1.0.0 has critical issues with implicit conversions and generic type handling. Please upgrade to v1.0.1 or later.
 
 ## Description
 
@@ -53,6 +55,7 @@ Friend Union Result(Of T, E)(Ok(Of T), [Error](Of E))
 - `Union` - Declare a union type
 - `Public`/`Friend` - Accessibility modifiers (optional, defaults to Public)
 - `Of` - Generic type parameters
+- `'` or `REM` - Line comments (lines starting with these are ignored)
 
 #### Union Declaration Format
 ```
@@ -214,7 +217,7 @@ Public MustInherit Class Maybe(Of T)
 End Class
 ```
 
-### Usage in Code
+### Usage in Code (Actually Works in 1.0.1)
 
 ```vb
 ' Create union values using implicit conversion

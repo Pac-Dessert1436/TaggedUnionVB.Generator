@@ -55,7 +55,8 @@ Public NotInheritable Class TaggedUnionGen
 
         For Each line In lines
             If String.IsNullOrWhiteSpace(line) Then Continue For
-            If line.StartsWith("'") Then Continue For
+            Dim trimmed = line.TrimStart()
+            If trimmed.StartsWith("'") OrElse trimmed.StartsWith("REM ", StringComparison.OrdinalIgnoreCase) Then Continue For
 
             If line.StartsWith("Imports ", StringComparison.OrdinalIgnoreCase) Then
                 Dim ns = line.Substring(8).Trim()
@@ -320,6 +321,7 @@ Public NotInheritable Class TaggedUnionGen
         For Each [case] In unionDef.Cases
             GenerateCaseWrapper(code, unionDef, [case])
         Next
+        GenerateConversionOperators(code, unionDef)
 
         code.AppendLine($"End Class")
     End Sub
@@ -376,14 +378,25 @@ Public NotInheritable Class TaggedUnionGen
         code.AppendLine($"        Public Sub New(value As {caseType})")
         code.AppendLine($"            Me.Value = value")
         code.AppendLine($"        End Sub")
-        code.AppendLine()
-        code.AppendLine($"        ''' <summary>")
-        code.AppendLine($"        ''' Implicit conversion from {caseType} to {unionDef.UnionName}{typeParamList}")
-        code.AppendLine($"        ''' </summary>")
-        code.AppendLine($"        Public Shared Widening Operator CType(value As {caseType}) As {unionDef.UnionName}{typeParamList}")
-        code.AppendLine($"            Return New {cleanCaseName}_Case(value)")
-        code.AppendLine($"        End Operator")
         code.AppendLine($"    End Class")
         code.AppendLine()
+    End Sub
+
+    Private Sub GenerateConversionOperators(code As StringBuilder, unionDef As UnionDefinition)
+        Dim typeParamList = If(unionDef.TypeParameters.Any(), $"(Of {String.Join(", ", unionDef.TypeParameters)})", "")
+
+        For Each [case] In unionDef.Cases
+            Dim caseTypeArgs = If([case].TypeArguments.Any(), $"(Of {String.Join(", ", [case].TypeArguments)})", "")
+            Dim caseType = $"{[case].CaseName}{caseTypeArgs}"
+            Dim cleanCaseName = If([case].CaseName.StartsWith("["), [case].CaseName.Substring(1, [case].CaseName.Length - 2), [case].CaseName)
+
+            code.AppendLine($"    ''' <summary>")
+            code.AppendLine($"    ''' Implicit conversion from {caseType} to {unionDef.UnionName}{typeParamList}")
+            code.AppendLine($"    ''' </summary>")
+            code.AppendLine($"    Public Shared Widening Operator CType(value As {caseType}) As {unionDef.UnionName}{typeParamList}")
+            code.AppendLine($"        Return New {cleanCaseName}_Case(value)")
+            code.AppendLine($"    End Operator")
+            code.AppendLine()
+        Next
     End Sub
 End Class
