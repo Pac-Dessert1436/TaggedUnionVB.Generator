@@ -465,7 +465,9 @@ Public NotInheritable Class TaggedUnionGen
         If model.Records IsNot Nothing Then allDefinitions.AddRange(model.Records)
 
         Dim definitionsByFileName = From def In allDefinitions
-                                    Group def By filename = If(TypeOf def Is UnionDefinition, DirectCast(def, UnionDefinition).FileName, DirectCast(def, RecordDefinition).FileName)
+                                    Group def By filename = If(TypeOf def Is UnionDefinition, 
+                                        DirectCast(def, UnionDefinition).FileName, 
+                                        DirectCast(def, RecordDefinition).FileName)
                                     Into defs = Group
 
         For Each group In definitionsByFileName
@@ -629,13 +631,13 @@ Public NotInheritable Class TaggedUnionGen
         code.AppendLine($"    ''' <summary>")
         code.AppendLine($"    ''' Creates a new {fullRecordName} with the specified properties changed.")
         code.AppendLine($"    ''' </summary>")
-        Dim optionalParams = From p In recordDef.Properties Select $"Optional {p.Name} As {p.Type} = Nothing"
+        Dim optionalParams = From p In recordDef.Properties Select $"Optional {p.Name} As Object = Nothing"
         code.AppendLine($"    Public Function [With]({String.Join(", ", optionalParams)}) As {fullRecordName}")
         code.AppendLine($"        Return New {fullRecordName}(")
         For i = 0 To recordDef.Properties.Count - 1
             Dim prop = recordDef.Properties(i)
             Dim comma = If(i < recordDef.Properties.Count - 1, ",", "")
-            code.AppendLine($"            {prop.Name} := If({prop.Name}, Me.{prop.Name})" & comma)
+            code.AppendLine($"            {prop.Name} := If({prop.Name} IsNot Nothing, DirectCast({prop.Name}, {prop.Type}), Me.{prop.Name})" & comma)
         Next
         code.AppendLine($"        )")
         code.AppendLine($"    End Function")
@@ -660,13 +662,13 @@ Public NotInheritable Class TaggedUnionGen
         code.AppendLine($"    Public Overrides Function ToString() As String")
         If recordDef.Properties.Any() Then
             code.AppendLine($"        Dim propParts As New List(Of String) From {{")
-            Dim propParts = From p In recordDef.Properties Select $"NameOf({p.Name}) & "" = "" & If(Me.{p.Name} Is Nothing, ""Nothing"", Me.{p.Name}.ToString())"
+            Dim propParts = From p In recordDef.Properties Select $"NameOf({p.Name}) & "" = "" & If(CObj(Me.{p.Name}) Is Nothing, ""Nothing"", Me.{p.Name}.ToString())"
             For i = 0 To propParts.Count - 1
                 Dim comma = If(i < propParts.Count - 1, ",", "")
                 code.AppendLine($"            {propParts(i)}" & comma)
             Next
             code.AppendLine($"        }}")
-            code.AppendLine($"        Return $""{fullRecordName} {{{{ {{propParts}} }}}}""")
+            code.AppendLine($"        Return $""{fullRecordName} {{{{ {{String.Join("", "", propParts)}} }}}}""")
         Else
             code.AppendLine($"        Return $""{fullRecordName} {{{{ }}}}""")
         End If

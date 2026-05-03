@@ -2,7 +2,9 @@
 
 A source generator that creates **tagged union types** for VB.NET, providing type-safe pattern matching capabilities similar to discriminated unions in functional languages.
 
-> **v1.1.0 Major Release**: Introduces record definitions directly in `.union` files and multi-line syntax support. Users can combine records with unions to create more complex types. The package is now production-ready and backward compatible with version 1.0.1.
+> **⚠️ v1.1.0 Deprecated**: Version 1.1.0 contains a critical bug in the `With()` method generation for records with value type properties (structs like `Double`, `Integer`, etc.). _This bug causes compilation errors when using the generated code. **Please upgrade to v1.1.1 immediately.**_
+
+> **✅ v1.1.1 Stable Release**: Introduces record definitions directly in `.union` files and multi-line syntax support. Users can combine records with unions to create more complex types. The package is now production-ready and backward compatible with version 1.0.1.
 
 ## Description
 
@@ -23,19 +25,28 @@ Public Record [Nothing]()
 Public Union Maybe(Of T)(Just(Of T), [Nothing])
 ```
 
-## Version Notes: 1.0.1 → 1.1.0
+## Version Notes: 1.0.1 → 1.1.1
 
-The current version (v1.1.0) adds several new features and is **fully backward compatible** with v1.0.1. Here are some important considerations:
+The current version (v1.1.1) adds several new features and is **fully backward compatible with v1.0.1**. _Versions 1.1.0 and 1.0.0 are broken and cannot be used for production._ Here are some important considerations of the latest version:
 
 - **Record Limitations**: Record definitions in `.union` files do not support generic constraints. Adding this support would require significant additional complexity. *Records in `.union` files treat **every member** as an equality member, just like C# records.*
 - **Advanced Record Features**: For advanced record capabilities (instance methods, `Key` keyword for equality members), consider using the [VB.NET Record Generator](https://github.com/VBAndCs/VB-Record-Source-Generator) (created by [@VBAndCs](https://github.com/VBAndCs)) with `.rec` files as an alternative.
-- _**Comments in `.union` Files**: Version 1.0.1 already supports comments in `.union` files, but only full-line comments are valid. Comment flexibility has been greatly improved in the current version._
+- Comments in `.union` Files**: Version 1.0.1 already supports comments in `.union` files, but only full-line comments are valid. Comment flexibility has been greatly improved in the current version.
 ```vb
 ' ✅ This is a valid comment in 1.0.1
 Public Union NumberUnion(Integer, Single, Double) ' ❌ Invalid in 1.0.1
 ```
 
-### What's New in 1.1.0?
+### Breaking Bug Fixed in 1.1.1
+
+**Critical Bug in v1.1.0**: The `With()` method generated for records with value type properties (structs like `Double`, `Integer`, `Vector2`, etc.) was incorrectly using `= Nothing` as the default value and `If({prop.Name}, Me.{prop.Name})` for the null-coalescing logic. This caused compilation errors because value types cannot be `Nothing`.
+
+**Fix in v1.1.1**: The generator now uses a universal approach that works for **all** types (both value types and reference types):
+- Uses `Object` as the parameter type with `= Nothing` as the default value
+- Uses `If({prop.Name} IsNot Nothing, DirectCast({prop.Name}, {prop.Type}), Me.{prop.Name})` for the assignment
+- This approach avoids the need to detect whether a type is a value type or reference type at generation time
+
+### What's New in 1.1.1?
 
 1. **Record Definitions** - Define records directly in `.union` files:
 
