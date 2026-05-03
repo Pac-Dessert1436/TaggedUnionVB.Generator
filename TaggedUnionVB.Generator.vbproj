@@ -10,7 +10,7 @@
 
     <!-- NuGet Package Info -->
     <PackageId>TaggedUnionVB.Generator</PackageId>
-    <Version>1.0.1</Version>
+    <Version>1.1.0</Version>
     <Authors>Pac-Dessert1436</Authors>
     <Company></Company>
     <Description>A source generator that creates tagged union types for VB.NET, providing type-safe

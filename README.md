@@ -2,15 +2,72 @@
 
 A source generator that creates **tagged union types** for VB.NET, providing type-safe pattern matching capabilities similar to discriminated unions in functional languages.
 
-> **v1.0.1 Stable Release**: Fixed implicit conversion operators and multiple generic type parameters. Only this version is literally fully-tested and supports comments in `union` files. Users should still define custom types in their VB.NET projects for each union case.
-> 
-> **⚠️ v1.0.0 is broken**: Version 1.0.0 has critical issues with implicit conversions and generic type handling. Please upgrade to v1.0.1 or later.
+> **v1.1.0 Major Release**: Introduces record definitions directly in `.union` files and multi-line syntax support. Users can combine records with unions to create more complex types. The package is now production-ready and backward compatible with version 1.0.1.
 
 ## Description
 
 This source generator simplifies the creation of tagged union types (also known as "discriminated unions") in VB.NET, by parsing `.union` files and generating the corresponding VB.NET classes with pattern matching capabilities.
 
-The design follows Microsoft's planned C# 15 `union` keyword syntax, where users define their own case classes/structs and the discriminated union simply references them.
+The design aligns with Microsoft's planned union keyword syntax for C# 15, where users define their custom case classes or records, and the discriminated union references them directly.
+
+_**With the latest version of this source generator, you can effortlessly write `.union` files for records and discriminated unions in VB.NET, using syntax that closely mirrors the upcoming C# feature:**_
+```csharp
+public record Just<T>(T Value);
+public record Nothing();
+public union Maybe<T>(Just<T>, Nothing);
+```
+### 👇
+```vb
+Public Record Just(Of T)(Value As T)
+Public Record [Nothing]()
+Public Union Maybe(Of T)(Just(Of T), [Nothing])
+```
+
+## Version Notes: 1.0.1 → 1.1.0
+
+The current version (v1.1.0) adds several new features and is **fully backward compatible** with v1.0.1. Here are some important considerations:
+
+- **Record Limitations**: Record definitions in `.union` files do not support generic constraints. Adding this support would require significant additional complexity. *Records in `.union` files treat **every member** as an equality member, just like C# records.*
+- **Advanced Record Features**: For advanced record capabilities (instance methods, `Key` keyword for equality members), consider using the [VB.NET Record Generator](https://github.com/VBAndCs/VB-Record-Source-Generator) (created by [@VBAndCs](https://github.com/VBAndCs)) with `.rec` files as an alternative.
+
+### What's New in 1.1.0?
+
+1. **Record Definitions** - Define records directly in `.union` files:
+
+   ```vb
+   Public Record Just(Of T)(Value As T)
+   Public Record [Nothing]()
+   ```
+   Generates constructor, read-only properties, `With()` method for immutable updates, `Deconstruct()` for tuple unpacking, and the equality methods: `ToString()`, `Equals()`, `GetHashCode()`.
+
+2. **Multi-Line Syntax** - Support for multi-line declarations with inline comments:
+
+   ```vb
+   Imports System.Numerics
+
+   Public Union VectorUnion(  ' Union of vectors
+       Vector2,  ' 2D vector
+       Vector3,  ' 3D vector
+       Vector4   ' 4D vector
+   )
+   ```
+
+3. **Combined Records and Unions** - Mix records and unions in a single `.union` file:
+
+   ```vb
+   Public Record Just(Of T)(Value As T)
+   Public Record [Nothing]()
+   Public Union Maybe(Of T)(Just(Of T), [Nothing])
+   ```
+
+4. **Enhanced Comment Handling** - Comments are preserved in generated XML documentation while being ignored during parsing.
+
+### Improvements
+
+- Improved line break and whitespace handling
+- More robust parsing for complex definitions with type parameters
+- Better error tolerance and graceful handling of invalid syntax
+- Support for declarations without accessibility modifiers (defaults to package-private)
 
 ## Installation
 
@@ -31,7 +88,7 @@ dotnet add package TaggedUnionVB.Generator
 
 ### Creating Union Definitions
 
-Create files with the `.union` extension in your project. These files contain (and only contain) simple union definitions, together with namespace imports:
+Create files with the `.union` extension in your project. These files contain simple union and record definitions, together with namespace imports:
 
 ```vb
 Imports System.Numerics
@@ -39,20 +96,23 @@ Imports System.Numerics
 ' Valid union with existing, imported types
 Public Union VectorUnion(Vector2, Vector3, Vector4)
 
-' Users should define a Just(Of T) class and a Nothing class
+' Define records directly in the .union file
+Public Record Just(Of T)(Value As T)
+Public Record [Nothing]()
+
+' Union using records from the same file
 Public Union Maybe(Of T)(Just(Of T), [Nothing])
 
-' Users should define an Ok(Of T) class and an Error(Of E) class
+' Users can still define custom types in VB.NET and use them
 Friend Union Result(Of T, E)(Ok(Of T), [Error](Of E))
 ```
-
-⚠️ **Important**: If the compiler throws a "type doesn't exist" error, you must define the union case types in your VB.NET project first (see [Example](#example) section for examples).
 
 ### Syntax Rules
 
 #### Keywords
 - `Imports` - Import required namespaces (optional)
 - `Union` - Declare a union type
+- `Record` - Declare a record type (NEW in 1.1.0)
 - `Public`/`Friend` - Accessibility modifiers (optional, defaults to Public)
 - `Of` - Generic type parameters
 - `'` or `REM` - Line comments (lines starting with these are ignored)
@@ -62,48 +122,55 @@ Friend Union Result(Of T, E)(Ok(Of T), [Error](Of E))
 [Public|Friend] Union Name[(Of TypeParam1, TypeParam2, ...)](Case1, Case2(Of T), Case3)
 ```
 
-This syntax is for **`.union` files**, and mainly supports:
+#### Record Declaration Format
+```
+[Public|Friend] Record Name[(Of TypeParam1, TypeParam2, ...)](Property1 As Type1, Property2 As Type2, ...)
+```
+
+This syntax is for **`.union` files**, and supports:
 - primitive types like `Integer`, `String`, `Double`
 - existing types from imported namespaces (e.g., `Vector2` from `System.Numerics`)
 - **user-defined classes or structs**
+- **records defined in the same `.union` file**
 
 Use square brackets around reserved keywords, like `[Nothing]`.
 
 ### Generated Code Features
 
-For each union definition, the generator creates:
-
+#### For Unions
 - **Base abstract class** with pattern matching methods
 - **Wrapper classes** for each union variant that hold existing type instances
 - **Pattern matching methods** (`IsXxx()`, `AsXxx()`)
 - **Implicit conversions** from existing types to union
 - **XML documentation comments**
 
+#### For Records (NEW in 1.1.0)
+- **Read-only properties** for each declared property
+- **Constructor** with all properties as parameters
+- **`With()` method** for immutable updates
+- **`Deconstruct()` method** for tuple unpacking
+- **`ToString()` method** for string representation
+- **`Equals()` method** for value-based equality comparison
+- **`GetHashCode()` method** for hash-based collections
+- **XML documentation comments**
+
 ## Example
 
-### Input: User-Defined Types and `.union` Files
+### Example 1: Union with Predefined Types
 
-First, define your case types in VB.NET:
-
+#### Input: `.union` File
 ```vb
-Public Class Just(Of T)
-    Public ReadOnly Property Value As T
-    Public Sub New(value As T)
-        Me.Value = value
-    End Sub
-End Class
+Imports System.Numerics
 
-Public Class [Nothing]
-End Class
+' Multi-line union with comments
+Public Union VectorUnion(  ' Union of numeric vectors
+    Vector2,  ' 2D vector from System.Numerics
+    Vector3,  ' 3D vector
+    Vector4   ' 4D vector
+)
 ```
 
-Then in a `.union` file:
-```vb
-Public Union Maybe(Of T)(Just(Of T), [Nothing])
-```
-
-### Output: Generated VB.NET Classes
-
+#### Output: Generated VB.NET Classes
 ```vb
 ' <auto-generated>
 '     This code was generated by `TaggedUnionVB.Generator`
@@ -114,6 +181,180 @@ Public Union Maybe(Of T)(Just(Of T), [Nothing])
 Option Explicit On
 Option Strict On
 
+Imports System.Numerics
+
+''' <summary>
+''' <para>Tagged Union: VectorUnion</para>
+''' <para>From declaration: <c>Public Union VectorUnion(Vector2, Vector3, Vector4)</c></para>
+''' </summary>
+Public MustInherit Class VectorUnion
+    Private Sub New()
+    End Sub
+
+    ''' <summary>
+    ''' Returns True if this VectorUnion is a Vector2
+    ''' </summary>
+    Public Function IsVector2() As Boolean
+        Return TypeOf Me Is Vector2_Case
+    End Function
+
+    ''' <summary>
+    ''' Returns the Vector2 value if this is a Vector2, otherwise throws.
+    ''' </summary>
+    Public Function AsVector2() As Vector2
+        Dim wrapper As Vector2_Case = TryCast(Me, Vector2_Case)
+        If wrapper Is Nothing Then
+            Throw New InvalidOperationException("VectorUnion is not a Vector2.")
+        End If
+        Return wrapper.Value
+    End Function
+
+    ' ... Similar methods for Vector3 and Vector4 ...
+
+    ''' <summary>
+    ''' Wrapper for Vector2 in VectorUnion
+    ''' </summary>
+    Public NotInheritable Class Vector2_Case
+        Inherits VectorUnion
+        Public ReadOnly Property Value As Vector2
+        Public Sub New(value As Vector2)
+            Me.Value = value
+        End Sub
+        Public Shared Widening Operator CType(value As Vector2) As VectorUnion
+            Return New Vector2_Case(value)
+        End Operator
+    End Class
+
+    ' ... Similar wrapper classes for Vector3 and Vector4 ...
+End Class
+```
+
+### Example 2: Records and Unions Combined (NEW in 1.1.0)
+
+#### Input: `.union` File
+```vb
+' Define records directly in the .union file
+Public Record Just(Of T)(Value As T)
+Public Record [Nothing]()
+
+' Union using the records
+Public Union Maybe(Of T)(Just(Of T), [Nothing])
+```
+
+#### Output: Generated VB.NET Classes
+
+**Record Generation:**
+```vb
+''' <summary>
+''' <para>Record: Just(Of T)</para>
+''' <para>From declaration: <c>Public Record Just(Of T)(Value As T)</c></para>
+''' </summary>
+Public NotInheritable Class Just(Of T)
+    ''' <summary>
+    ''' The Value value
+    ''' </summary>
+    Public ReadOnly Property Value As T
+
+    ''' <summary>
+    ''' Creates a new Just(Of T)
+    ''' </summary>
+    Public Sub New(Value As T)
+        Me.Value = Value
+    End Sub
+
+    ''' <summary>
+    ''' Creates a new Just(Of T) with the specified properties changed
+    ''' </summary>
+    Public Function [With](Optional Value As T = Nothing) As Just(Of T)
+        Return New Just(Of T)(
+            Value := If(Value IsNot Nothing, Value, Me.Value)
+        )
+    End Function
+
+    ''' <summary>
+    ''' Deconstructs the Just(Of T) into its properties
+    ''' </summary>
+    Public Sub Deconstruct(<Out> ByRef Value As T)
+        Value = Me.Value
+    End Sub
+
+    ''' <summary>
+    ''' Returns a string representation of the Just(Of T)
+    ''' </summary>
+    Public Overrides Function ToString() As String
+        Return $"Just(Of T) {{ Value = {Value} }}"
+    End Function
+
+    ''' <summary>
+    ''' Determines whether the specified object is equal to the current Just(Of T)
+    ''' </summary>
+    Public Overrides Function Equals(obj As Object) As Boolean
+        If obj Is Nothing Then Return False
+        If TypeOf obj IsNot Just(Of T) Then Return False
+        Dim other = DirectCast(obj, Just(Of T))
+        Return Object.Equals(Me.Value, other.Value)
+    End Function
+
+    ''' <summary>
+    ''' Returns the hash code for this Just(Of T)
+    ''' </summary>
+    Public Overrides Function GetHashCode() As Integer
+        Return HashCode.Combine(Me.Value)
+    End Function
+End Class
+
+''' <summary>
+''' <para>Record: [Nothing]</para>
+''' <para>From declaration: <c>Public Record [Nothing]()</c></para>
+''' </summary>
+Public NotInheritable Class [Nothing]
+    ''' <summary>
+    ''' Creates a new [Nothing]
+    ''' </summary>
+    Public Sub New()
+    End Sub
+
+    ''' <summary>
+    ''' Creates a new [Nothing] with the specified properties changed
+    ''' </summary>
+    Public Function [With]() As [Nothing]
+        Return New [Nothing](
+        )
+    End Function
+
+    ''' <summary>
+    ''' Deconstructs the [Nothing] into its properties
+    ''' </summary>
+    Public Sub Deconstruct()
+    End Sub
+
+    ''' <summary>
+    ''' Returns a string representation of the [Nothing]
+    ''' </summary>
+    Public Overrides Function ToString() As String
+        Return $"[Nothing] {{ }}"
+    End Function
+
+    ''' <summary>
+    ''' Determines whether the specified object is equal to the current [Nothing]
+    ''' </summary>
+    Public Overrides Function Equals(obj As Object) As Boolean
+        If obj Is Nothing Then Return False
+        If TypeOf obj IsNot [Nothing] Then Return False
+        Return True
+    End Function
+
+    ''' <summary>
+    ''' Returns the hash code for this [Nothing]
+    ''' </summary>
+    Public Overrides Function GetHashCode() As Integer
+        Return GetType([Nothing]).GetHashCode()
+    End Function
+End Class
+```
+
+**Union Generation:**
+```vb
 ''' <summary>
 ''' <para>Tagged Union: Maybe(Of T)</para>
 ''' <para>From declaration: <c>Public Union Maybe(Of T)(Just(Of T), [Nothing])</c></para>
@@ -158,66 +399,11 @@ Public MustInherit Class Maybe(Of T)
         Return wrapper.Value
     End Function
 
-    ''' <summary>
-    ''' Wrapper for Just(Of T) in Maybe(Of T)
-    ''' </summary>
-    Public NotInheritable Class Just_Case
-        Inherits Maybe(Of T)
-
-        ''' <summary>
-        ''' The underlying Just(Of T) value
-        ''' </summary>
-        Public ReadOnly Property Value As Just(Of T)
-
-        ''' <summary>
-        ''' Creates a new Just_Case
-        ''' </summary>
-        ''' <param name="value">The Just(Of T) value</param>
-        Public Sub New(value As Just(Of T))
-            Me.Value = value
-        End Sub
-
-        ''' <summary>
-        ''' Implicit conversion from Just(Of T) to Maybe(Of T)
-        ''' </summary>
-        Public Shared Widening Operator CType(value As Just(Of T)) As Maybe(Of T)
-            Return New Just_Case(value)
-        End Operator
-
-    End Class
-
-    ''' <summary>
-    ''' Wrapper for [Nothing] in Maybe(Of T)
-    ''' </summary>
-    Public NotInheritable Class Nothing_Case
-        Inherits Maybe(Of T)
-
-        ''' <summary>
-        ''' The underlying [Nothing] value
-        ''' </summary>
-        Public ReadOnly Property Value As [Nothing]
-
-        ''' <summary>
-        ''' Creates a new Nothing_Case
-        ''' </summary>
-        ''' <param name="value">The [Nothing] value</param>
-        Public Sub New(value As [Nothing])
-            Me.Value = value
-        End Sub
-
-        ''' <summary>
-        ''' Implicit conversion from [Nothing] to Maybe(Of T)
-        ''' </summary>
-        Public Shared Widening Operator CType(value As [Nothing]) As Maybe(Of T)
-            Return New Nothing_Case(value)
-        End Operator
-
-    End Class
-
+    ' ... Wrapper classes and conversion operators ...
 End Class
 ```
 
-### Usage in Code (Actually Works in 1.0.1)
+### Usage in Code
 
 ```vb
 ' Create union values using implicit conversion
@@ -233,6 +419,12 @@ End If
 If noValue.IsNothing() Then
     Console.WriteLine("Nothing value")
 End If
+
+' Use record With() method for immutable updates
+Dim updated = New Just(Of Integer)(42).With(Value := 100)
+
+' Use record Deconstruct() for tuple unpacking
+Dim (extractedValue) = someValue.AsJust()
 ```
 
 ## Advanced Features
@@ -246,52 +438,14 @@ Public Union Maybe(Of T)(Just(Of T), [Nothing])
 Public Union Result(Of T, E)(Ok(Of T), [Error](Of E))
 ```
 
-#### Result Union Example
+### Generic Records (NEW in 1.1.0)
 
-For a `Result(Of T, E)` union:
-
-```vb
-' Input .union file
-Friend Union Result(Of T, E)(Ok(Of T), [Error](Of E))
-```
-
-The generator produces a union with proper generic case handling:
+Records can also be generic:
 
 ```vb
-Public MustInherit Class Result(Of T, E)
-    ' ...
-    Public Function IsOk() As Boolean
-        Return TypeOf Me Is Ok_Case
-    End Function
-
-    Public Function AsOk() As Ok(Of T)
-        Dim wrapper As Ok_Case = TryCast(Me, Ok_Case)
-        ' ...
-        Return wrapper.Value
-    End Function
-
-    Public Function IsError() As Boolean
-        Return TypeOf Me Is Error_Case
-    End Function
-
-    Public Function AsError() As [Error](Of E)
-        Dim wrapper As Error_Case = TryCast(Me, Error_Case)
-        ' ...
-        Return wrapper.Value
-    End Function
-
-    NotInheritable Class Ok_Case
-        Inherits Result(Of T, E)
-        Public ReadOnly Property Value As Ok(Of T)
-        ' ...
-    End Class
-
-    NotInheritable Class Error_Case
-        Inherits Result(Of T, E)
-        Public ReadOnly Property Value As [Error](Of E)
-        ' ...
-    End Class
-End Class
+Public Record Ok(Of T)(Value As T)
+Public Record [Error](Of E)(Message As String, Code As E)
+Public Union Result(Of T, E)(Ok(Of T), [Error](Of E))
 ```
 
 ### Existing Type Wrappers
@@ -312,19 +466,17 @@ The generated classes provide type-safe pattern matching through `IsXxx()` and `
 
 - `.union` files should be included in your project as "Additional Files"
 - Generated files are created with `_TaggedUnion.g.vb` suffix
-- All unions from a single `.union` file are generated into one output file
+- All unions and records from a single `.union` file are generated into one output file
 
 ## Error Handling
 
-The generator includes error handling that will silently skip invalid union definitions. Ensure your syntax follows the specification.
+The generator includes error handling that will silently skip invalid union/record definitions. Ensure your syntax follows the specification.
 
 ## Limitations
 
-- Union definitions must be on a single line
-- Case names cannot contain spaces
-- Generic parameters must be simple identifiers
 - No support for nested unions or recursive definitions
-- Reserved keywords used as case names must be wrapped in square brackets (e.g., `[Nothing]`)
+- Reserved keywords used as case/record names must be wrapped in square brackets (e.g., `[Nothing]`)
+- Record properties without explicit types default to `Object`
 
 ## Building from Source
 
