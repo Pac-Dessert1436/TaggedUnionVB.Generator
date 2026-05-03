@@ -29,6 +29,11 @@ The current version (v1.1.0) adds several new features and is **fully backward c
 
 - **Record Limitations**: Record definitions in `.union` files do not support generic constraints. Adding this support would require significant additional complexity. *Records in `.union` files treat **every member** as an equality member, just like C# records.*
 - **Advanced Record Features**: For advanced record capabilities (instance methods, `Key` keyword for equality members), consider using the [VB.NET Record Generator](https://github.com/VBAndCs/VB-Record-Source-Generator) (created by [@VBAndCs](https://github.com/VBAndCs)) with `.rec` files as an alternative.
+- _**Comments in `.union` Files**: Version 1.0.1 already supports comments in `.union` files, but only full-line comments are valid. Comment flexibility has been greatly improved in the current version._
+```vb
+' ✅ This is a valid comment in 1.0.1
+Public Union NumberUnion(Integer, Single, Double) ' ❌ Invalid in 1.0.1
+```
 
 ### What's New in 1.1.0?
 
